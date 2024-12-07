@@ -8,7 +8,8 @@ import {TokenSale} from "../src/TokenSale.sol";
 import {Timelock} from "../src/Timelock.sol";
 import {DAO} from "../src/DAO.sol";
 import {Staking} from "../src/Staking.sol";
-import {UniswapHelper} from "../src/UniswapHelper.sol";
+// import {UniswapHelper} from "../src/UniswapHelper.sol";
+import {CounterHook} from "../src/CounterHook.sol";
 import {MockUSDT} from "../src/MockUSDT.sol";
 
 contract DeployTest is Test {
@@ -19,7 +20,8 @@ contract DeployTest is Test {
     Timelock timelock;
     DAO dao;
     Staking staking;
-    UniswapHelper uniswapHelper;
+    // UniswapHelper uniswapHelper;
+    CounterHook counterHook;
     MockUSDT mockUSDT;
 
     // Addresses
@@ -41,8 +43,11 @@ contract DeployTest is Test {
         // Deploy MockUSDT
         mockUSDT = new MockUSDT(1_000_000 ether);
 
-        // Deploy UniswapHelper
-        uniswapHelper = new UniswapHelper(founder);
+        // // Deploy UniswapHelper
+        // uniswapHelper = new UniswapHelper(founder);
+
+        // Deploy CounterHook
+        counterHook = new CounterHook(founder);
 
         // Deploy Treasury
         treasury = new Treasury(founder);
@@ -75,7 +80,7 @@ contract DeployTest is Test {
             address(timelock),
             address(mockUSDT),
             address(staking),
-            address(uniswapHelper)
+            address(counterHook) //address(uniswapHelper)
         );
 
         // Airdrop tokens to TokenSale contract
