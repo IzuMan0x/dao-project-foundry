@@ -97,12 +97,15 @@ contract DeployTest is Test {
 
     function test_StartTokenSaleZero() public {
         uint256 saleCounter = tokenSale.saleIdCounter();
-        (uint256 amount, , uint256 price, , , , ) = tokenSale.sales(
-            saleCounter
-        );
+        (
+            uint256 saleId,
+            uint256 tokensAvailable,
+            uint256 price,
+            bool active
+        ) = tokenSale.sales(saleCounter);
         bool saleActive = tokenSale.saleActive();
 
-        assertEq(amount, tokenSaleAirdrop);
+        assertEq(tokensAvailable, tokenSaleAirdrop);
         assertEq(price, tokenPrice);
         assertTrue(saleActive);
     }
