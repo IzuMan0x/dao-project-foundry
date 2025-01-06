@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import "./Treasury.sol";
 import "./WerewolfTokenV1.sol";
 import "./DAO.sol";
 import "./TokenSale.sol";
 
-contract CompaniesHouseV1 is AccessControl {
+contract CompaniesHouseV1 is AccessControlUpgradeable {
     WerewolfTokenV1 private werewolfToken;
     TokenSale public tokenSale;
     DAO public dao;
@@ -21,10 +20,16 @@ contract CompaniesHouseV1 is AccessControl {
 
     bytes32 public constant STAFF_ROLE = keccak256("CEO");
 
-    uint256 public index = 0; // Number of companies
+    //note upgradeable contract this needs to be set in the initializer function
+    /*   uint256 public index = 0; // Number of companies @dev avoid initializing variable to zero it is a waste of gas consider starting at 1
     uint256 public employeesIndex = 0; // Number of employees in company
     uint256 public amountToPay = 10 * 10 ** 18; // Amount to pay to create a business
-    uint256 public fee = 10;
+    uint256 public fee = 10; */
+
+    uint256 public index; // Number of companies
+    uint256 public employeesIndex; // Number of employees in company
+    uint256 public amountToPay; // Amount to pay to create a business
+    uint256 public fee;
 
     // Company Struct
     struct CompanyStruct {
@@ -86,19 +91,15 @@ contract CompaniesHouseV1 is AccessControl {
     modifier onlyRoleWithPower(uint256 _companyId) {
         // Ensure the caller is a member of the company
         Employee storage employee = _employees[msg.sender];
-        require(
-            employee.companyId == _companyId,
-            "Not an employee of this company"
-        );
+        require(employee.companyId == _companyId, "Not an employee of this company");
 
         bool hasPower = false;
 
         // Check if the employee's role is in the powerRoles list
         for (uint256 i = 0; i < companies[_companyId].powerRoles.length; i++) {
             if (
-                keccak256(
-                    abi.encodePacked(companies[_companyId].powerRoles[i])
-                ) == keccak256(abi.encodePacked(employee.role))
+                keccak256(abi.encodePacked(companies[_companyId].powerRoles[i])) //mh need to make sure no company has id of 0
+                    == keccak256(abi.encodePacked(employee.role))
             ) {
                 hasPower = true;
                 break;
@@ -109,17 +110,32 @@ contract CompaniesHouseV1 is AccessControl {
         _;
     }
 
-    constructor(
-        address _token,
-        address treasuryAddress,
-        address _daoAddress,
-        address tokenSaleAddress
-    ) {
+    constructor( /* address _token, address treasuryAddress, address _daoAddress, address tokenSaleAddress */ ) {
+        /*    werewolfToken = WerewolfTokenV1(_token);
+        dao = DAO(_daoAddress);
+        tokenSale = TokenSale(tokenSaleAddress);
+        treasury = Treasury(treasuryAddress);
+        _treasuryAddress = treasuryAddress;
+        // _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        // _setupRole(STAFF_ROLE, msg.sender); */
+        //disable the implementation contracts initializer
+        _disableInitializers();
+    }
+
+    function initialize(address _token, address treasuryAddress, address _daoAddress, address tokenSaleAddress)
+        public
+        initializer
+    {
         werewolfToken = WerewolfTokenV1(_token);
         dao = DAO(_daoAddress);
         tokenSale = TokenSale(tokenSaleAddress);
         treasury = Treasury(treasuryAddress);
         _treasuryAddress = treasuryAddress;
+
+        //previously declared outside the constructor
+        fee = 10;
+        amountToPay = 10e18;
+
         // _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         // _setupRole(STAFF_ROLE, msg.sender);
     }
@@ -136,8 +152,7 @@ contract CompaniesHouseV1 is AccessControl {
         string memory ownerCurrency
     ) public payable {
         require(
-            werewolfToken.balanceOf(msg.sender) >= amountToPay + fee,
-            "Token balance must be more than amount to pay."
+            werewolfToken.balanceOf(msg.sender) >= amountToPay + fee, "Token balance must be more than amount to pay."
         );
 
         address[] memory employees;
@@ -164,7 +179,7 @@ contract CompaniesHouseV1 is AccessControl {
         employee.employeeId = employeesIndex;
         employee.payableAddress = msg.sender;
         employee.name = ownerName;
-        employee.companyId = index;
+        employee.companyId = index; //mh we should avoid having a company with ID == 0
         employee.role = ownerRole;
         employee.hiredAt = block.timestamp;
         employee.active = true;
@@ -176,10 +191,7 @@ contract CompaniesHouseV1 is AccessControl {
 
         index += 1;
 
-        require(
-            werewolfToken.transferFrom(msg.sender, address(this), amountToPay),
-            "Transfer failed."
-        );
+        require(werewolfToken.transferFrom(msg.sender, address(this), amountToPay), "Transfer failed.");
     }
 
     function deleteCompany(uint256 _number) public {
@@ -188,28 +200,19 @@ contract CompaniesHouseV1 is AccessControl {
         emit CompanyDeleted(companies[_number]); // Triggering event
     }
 
-    function retrieveCompany(
-        uint256 _companyId
-    ) public view returns (CompanyStruct memory) {
+    function retrieveCompany(uint256 _companyId) public view returns (CompanyStruct memory) {
         return companies[_companyId];
     }
 
-    function retrieveEmployee(
-        uint256 _companyId,
-        address _employee
-    ) public view returns (Employee memory) {
+    function retrieveEmployee(uint256 _companyId, address _employee) public view returns (Employee memory) {
         // Ensure that only the owner of the company can retrieve employee details
         require(
-            msg.sender == companies[_companyId].owner,
-            "Only the owner of the company can retrieve employee details"
+            msg.sender == companies[_companyId].owner, "Only the owner of the company can retrieve employee details"
         );
 
         // Check if the employee exists in the employees mapping
         Employee memory employee = _employees[_employee];
-        require(
-            employee.companyId == _companyId,
-            "Employee does not belong to this company"
-        );
+        require(employee.companyId == _companyId, "Employee does not belong to this company");
 
         return employee;
     }
@@ -222,16 +225,10 @@ contract CompaniesHouseV1 is AccessControl {
         uint256 salary,
         string memory _currency
     ) public onlyRoleWithPower(_companyId) {
-        require(
-            msg.sender == companies[_companyId].owner,
-            "Only owner of the company can hire employee"
-        );
+        require(msg.sender == companies[_companyId].owner, "Only owner of the company can hire employee");
         bool roleExists = false; // Flag to check if role exists
         for (uint256 i = 0; i < companies[_companyId].roles.length; i++) {
-            if (
-                keccak256(abi.encodePacked(companies[_companyId].roles[i])) ==
-                keccak256(abi.encodePacked(_role))
-            ) {
+            if (keccak256(abi.encodePacked(companies[_companyId].roles[i])) == keccak256(abi.encodePacked(_role))) {
                 roleExists = true;
                 break;
             }
@@ -267,13 +264,8 @@ contract CompaniesHouseV1 is AccessControl {
         // remove employee from employees list
         // delete _employees[_employeeId];
         // Shift all elements to the left starting from index+1
-        for (
-            uint256 i = index;
-            i < companies[_companyId].employees.length - 1;
-            i++
-        ) {
-            companies[_companyId].employees[i] = companies[_companyId]
-                .employees[i + 1];
+        for (uint256 i = index; i < companies[_companyId].employees.length - 1; i++) {
+            companies[_companyId].employees[i] = companies[_companyId].employees[i + 1];
         }
 
         // Remove the last element of the array
@@ -318,20 +310,13 @@ contract CompaniesHouseV1 is AccessControl {
             totalPayAmount += payAmount;
         }
 
-        uint256 threshold = ((werewolfToken.balanceOf(_treasuryAddress) *
-            treasury.thresholdPercentage()) / 100);
+        uint256 threshold = ((werewolfToken.balanceOf(_treasuryAddress) * treasury.thresholdPercentage()) / 100);
 
         uint256 treasuryBalance = werewolfToken.balanceOf(_treasuryAddress);
 
-        require(
-            totalPayAmount < threshold,
-            "Treasury has insufficient liquidity to pay employees."
-        );
+        require(totalPayAmount < threshold, "Treasury has insufficient liquidity to pay employees.");
 
-        require(
-            treasuryBalance > threshold,
-            "Treasury has insufficient liquidity to pay employees."
-        );
+        require(treasuryBalance > threshold, "Treasury has insufficient liquidity to pay employees.");
 
         // require(
         //     treasury.isAboveThreshold(),
@@ -355,10 +340,7 @@ contract CompaniesHouseV1 is AccessControl {
 
             require(payAmount > 0, "Pay amount must be more then 0.");
 
-            require(
-                payPeriod > 0,
-                "Not enough time has passed to pay employee"
-            );
+            require(payPeriod > 0, "Not enough time has passed to pay employee");
 
             // Call the payEmployee function through the DAO contract
             werewolfToken.payEmployee(employeeAddress, payAmount);
@@ -370,19 +352,12 @@ contract CompaniesHouseV1 is AccessControl {
         }
     }
 
-    function setCompanyRole(
-        address employeeAddress,
-        string memory newRole,
-        uint256 _companyId
-    ) public {
+    function setCompanyRole(address employeeAddress, string memory newRole, uint256 _companyId) public {
         Employee storage employee = _employees[employeeAddress];
         require(employee.active, "Employee must be active");
         bool roleExists = false; // Flag to check if role exists
         for (uint256 i = 0; i < companies[_companyId].roles.length; i++) {
-            if (
-                keccak256(abi.encodePacked(companies[_companyId].roles[i])) ==
-                keccak256(abi.encodePacked(newRole))
-            ) {
+            if (keccak256(abi.encodePacked(companies[_companyId].roles[i])) == keccak256(abi.encodePacked(newRole))) {
                 roleExists = true;
                 break;
             }
@@ -393,10 +368,7 @@ contract CompaniesHouseV1 is AccessControl {
         employee.role = newRole;
     }
 
-    function addCompanyRole(
-        uint256 _companyId,
-        string memory _newRole
-    ) public onlyRoleWithPower(_companyId) {
+    function addCompanyRole(uint256 _companyId, string memory _newRole) public onlyRoleWithPower(_companyId) {
         companies[_companyId].roles.push(_newRole);
     }
 }

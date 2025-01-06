@@ -2,9 +2,9 @@
 pragma solidity ^0.8.27;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract Staking is Ownable {
+contract Staking is OwnableUpgradeable {
     IERC20 public stakingToken;
     uint256 public stakedBalance;
     uint256 public stakingRewards;
@@ -17,28 +17,23 @@ contract Staking is Ownable {
 
     mapping(address => StakeInfo) public stakes;
 
-    event TokensStaked(
-        address indexed staker,
-        uint256 amount,
-        uint256 duration
-    );
-    event TokensWithdrawn(
-        address indexed staker,
-        uint256 amount,
-        uint256 reward
-    );
+    event TokensStaked(address indexed staker, uint256 amount, uint256 duration);
+    event TokensWithdrawn(address indexed staker, uint256 amount, uint256 reward);
     event RewardsAdded(uint256 amount);
 
-    constructor(address _stakingToken, address timelock) Ownable(timelock) {
+    constructor( /* address _stakingToken, address timelock */ ) /* Ownable(timelock) */ {
+        /* stakingToken = IERC20(_stakingToken); */
+        //disabling the initializer function for the implementation contract
+        _disableInitializers();
+    }
+
+    function initialize(address _stakingToken, address _timelock) public initializer {
         stakingToken = IERC20(_stakingToken);
+        __Ownable_init(_timelock);
     }
 
     // Stake tokens with a fixed duration, which sets a lock period
-    function stakeFixedDuration(
-        address _owner,
-        uint256 _amount,
-        uint256 _duration
-    ) external {
+    function stakeFixedDuration(address _owner, uint256 _amount, uint256 _duration) external {
         _stake(_owner, _amount, _duration, true);
     }
 
@@ -48,22 +43,11 @@ contract Staking is Ownable {
     }
 
     // Internal function for staking logic
-    function _stake(
-        address _owner,
-        uint256 _amount,
-        uint256 _duration,
-        bool isFixed
-    ) internal {
+    function _stake(address _owner, uint256 _amount, uint256 _duration, bool isFixed) internal {
         require(_amount > 0, "Staking amount must be greater than zero");
-        require(
-            stakingToken.allowance(_owner, address(this)) >= _amount,
-            "Insufficient token allowance"
-        );
+        require(stakingToken.allowance(_owner, address(this)) >= _amount, "Insufficient token allowance");
 
-        require(
-            stakingToken.transferFrom(msg.sender, address(this), _amount),
-            "Token transfer failed"
-        );
+        require(stakingToken.transferFrom(msg.sender, address(this), _amount), "Token transfer failed");
 
         StakeInfo storage stake = stakes[msg.sender];
         if (stake.amount == 0) {
@@ -92,10 +76,7 @@ contract Staking is Ownable {
 
         // If a fixed duration is set, ensure the lock period has passed
         if (stake.endStakeTime > 0) {
-            require(
-                block.timestamp >= stake.endStakeTime,
-                "Tokens are still locked"
-            );
+            require(block.timestamp >= stake.endStakeTime, "Tokens are still locked");
         }
 
         uint256 reward = _collectRewards(msg.sender);
@@ -103,10 +84,7 @@ contract Staking is Ownable {
         stake.endStakeTime = 0;
         stakedBalance -= stakedAmount;
 
-        require(
-            stakingToken.transfer(msg.sender, stakedAmount + reward),
-            "Token transfer failed"
-        );
+        require(stakingToken.transfer(msg.sender, stakedAmount + reward), "Token transfer failed");
 
         emit TokensWithdrawn(msg.sender, stakedAmount, reward);
     }
@@ -141,10 +119,7 @@ contract Staking is Ownable {
     // Add more tokens to the staking rewards pool
     function addStakingRewards(uint256 _amount) external onlyOwner {
         require(_amount > 0, "Reward amount must be greater than zero");
-        require(
-            stakingToken.transferFrom(msg.sender, address(this), _amount),
-            "Token transfer failed"
-        );
+        require(stakingToken.transferFrom(msg.sender, address(this), _amount), "Token transfer failed");
 
         stakingRewards += _amount;
         emit RewardsAdded(_amount);

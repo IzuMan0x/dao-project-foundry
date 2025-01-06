@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./WerewolfTokenV1.sol";
 import "./Staking.sol";
 
-contract Treasury is Ownable {
+contract Treasury is OwnableUpgradeable {
     // address public werewolfToken;
     WerewolfTokenV1 private werewolfToken;
     Staking public stakingContract;
@@ -20,11 +20,24 @@ contract Treasury is Ownable {
 
     event RewardsDistributed(address indexed caller, uint256 amount);
 
-    constructor(address _token) Ownable(msg.sender) {
-        require(_token != address(0), "WerewolfTokenV1 address cannot be zero");
+    constructor( /* address _token */ ) {
+        /*       require(_token != address(0), "WerewolfTokenV1 address cannot be zero");
+        // werewolfToken = _token;
+        werewolfToken = WerewolfTokenV1(_token);
+        allowedTokens[_token] = true; // Set initial werewolfToken as allowed */
+
+        //disable initializer
+        _disableInitializers();
+    }
+
+    function initialize(address _token, address _owner) public initializer {
+        require(_token != address(0) && _owner != address(0), "WerewolfTokenV1 address cannot be zero");
         // werewolfToken = _token;
         werewolfToken = WerewolfTokenV1(_token);
         allowedTokens[_token] = true; // Set initial werewolfToken as allowed
+
+        //initialize the owner of the contract
+        __Ownable_init(_owner);
     }
 
     function setStakingContract(address _stakingAddress) external onlyOwner {
@@ -58,18 +71,13 @@ contract Treasury is Ownable {
     // Distributes rewards to the staking contract from the treasury
     function distributeRewards() external {
         require(
-            werewolfToken.balanceOf(address(this)) >=
-                stakingContract.stakingRewards(),
+            werewolfToken.balanceOf(address(this)) >= stakingContract.stakingRewards(),
             "Insufficient reward balance in Treasury"
         );
 
         // Transfer rewards to the staking contract
         require(
-            werewolfToken.transfer(
-                address(stakingContract),
-                stakingContract.stakingRewards()
-            ),
-            "Reward transfer failed"
+            werewolfToken.transfer(address(stakingContract), stakingContract.stakingRewards()), "Reward transfer failed"
         );
 
         emit RewardsDistributed(msg.sender, stakingContract.stakingRewards());

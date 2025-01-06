@@ -2,7 +2,7 @@
 pragma solidity ^0.8.27;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./WerewolfTokenV1.sol";
 import "./Treasury.sol";
@@ -33,7 +33,7 @@ interface IUniswapHelper {
     ) external returns (uint256 tokenId);
 }
 
-contract TokenSale is Ownable {
+contract TokenSale is OwnableUpgradeable {
     WerewolfTokenV1 private werewolfToken;
     Treasury private treasury;
     address public usdtTokenAddress;
@@ -44,7 +44,6 @@ contract TokenSale is Ownable {
     // BUG: test
     IUniswapHelper public uniswapHelper;
     //
-
     uint256 public price;
     uint256 public saleIdCounter = 0;
     bool public saleActive;
@@ -60,11 +59,7 @@ contract TokenSale is Ownable {
 
     event SaleStarted(uint256 saleId, uint256 tokensAvailable, uint256 price);
     event SaleEnded(uint256 saleId);
-    event TokensPurchased(
-        address indexed buyer,
-        uint256 amount,
-        uint256 saleId
-    );
+    event TokensPurchased(address indexed buyer, uint256 amount, uint256 saleId);
 
     // BUG: remove address _uniswapHelper
     constructor(
@@ -74,7 +69,31 @@ contract TokenSale is Ownable {
         address _usdtTokenAddress,
         address _stakingAddress,
         address _uniswapHelper
-    ) Ownable(msg.sender) {
+    ) {
+        /*      require(_usdtTokenAddress != address(0), "USDT address cannot be zero");
+        usdtTokenAddress = _usdtTokenAddress;
+        usdtToken = IERC20(_usdtTokenAddress);
+        werewolfToken = WerewolfTokenV1(_token);
+        stakingContract = Staking(_stakingAddress);
+        treasury = Treasury(_treasury);
+        uniswapHelper = IUniswapHelper(_uniswapHelper);
+        // Set floor price for token sales
+        price = 0.001 * 10 ** 18; */
+
+        //disable initializer
+        _disableInitializers();
+    }
+
+    function initialize(
+        address newOwner,
+        address _token,
+        address _treasury,
+        address _timelock,
+        address _usdtTokenAddress,
+        address _stakingAddress,
+        address _uniswapHelper
+    ) public initializer {
+        __Ownable_init(newOwner); //we do not want the msg.sender to be the owner since that will be the proxyAdmin
         require(_usdtTokenAddress != address(0), "USDT address cannot be zero");
         usdtTokenAddress = _usdtTokenAddress;
         usdtToken = IERC20(_usdtTokenAddress);
@@ -95,14 +114,8 @@ contract TokenSale is Ownable {
     function startSaleZero(uint256 _amount, uint256 _price) external onlyOwner {
         require(!saleActive, "Sale is already active.");
         require(_amount > 0, "Amount must be greater than zero.");
-        require(
-            _price >= price,
-            "Price must be greater or equal to prev price."
-        );
-        require(
-            werewolfToken.balanceOf(address(this)) >= _amount,
-            "Not enough tokens for sale."
-        );
+        require(_price >= price, "Price must be greater or equal to prev price.");
+        require(werewolfToken.balanceOf(address(this)) >= _amount, "Not enough tokens for sale.");
 
         sales[saleIdCounter] = Sale(saleIdCounter, _amount, _price, true);
         price = _price;
@@ -114,14 +127,8 @@ contract TokenSale is Ownable {
     function startSale(uint256 _amount, uint256 _price) external onlyOwner {
         require(!saleActive, "Sale is already active.");
         require(_amount > 0, "Amount must be greater than zero.");
-        require(
-            _price >= price,
-            "Price must be greater or equal to prev price."
-        );
-        require(
-            werewolfToken.balanceOf(address(this)) >= _amount,
-            "Not enough tokens for sale."
-        );
+        require(_price >= price, "Price must be greater or equal to prev price.");
+        require(werewolfToken.balanceOf(address(this)) >= _amount, "Not enough tokens for sale.");
 
         saleIdCounter++;
         sales[saleIdCounter] = Sale(saleIdCounter, _amount, _price, true);
@@ -137,22 +144,12 @@ contract TokenSale is Ownable {
         //     IERC20(token).transferFrom(from, to, amount),
         //     "TransferFrom failed"
         // );
-        require(
-            usdtToken.transferFrom(
-                msg.sender,
-                address(stakingContract),
-                amount
-            ),
-            "USDT transfer failed"
-        );
+        require(usdtToken.transferFrom(msg.sender, address(stakingContract), amount), "USDT transfer failed");
     }
 
     // BUG: test
     function testTransfer(uint256 amount) external {
-        require(
-            werewolfToken.transfer(address(stakingContract), amount),
-            "Token transfer to staking contract failed"
-        );
+        require(werewolfToken.transfer(address(stakingContract), amount), "Token transfer to staking contract failed");
     }
 
     function buyTokens(
@@ -167,29 +164,18 @@ contract TokenSale is Ownable {
     ) external {
         require(saleActive, "Sale is not active");
         Sale storage currentSale = sales[saleIdCounter];
-        require(
-            currentSale.tokensAvailable >= _amount,
-            "Not enough tokens available for sale"
-        );
+        require(currentSale.tokensAvailable >= _amount, "Not enough tokens available for sale");
 
         uint256 tokenAmount = amount0Desired; //_amount * 10 ** werewolfToken.decimals();
         uint256 usdtRequired = amount1Desired; //_amount * currentSale.price;
 
         // Transfer USDT from buyer to staking contract
-        require(
-            usdtToken.transferFrom(
-                msg.sender,
-                address(stakingContract),
-                usdtRequired
-            ),
-            "USDT transfer failed"
-        );
+        require(usdtToken.transferFrom(msg.sender, address(stakingContract), usdtRequired), "USDT transfer failed");
 
         // Transfer tokens to staking contract
         currentSale.tokensAvailable -= _amount;
         require(
-            werewolfToken.transfer(address(stakingContract), tokenAmount),
-            "Token transfer to staking contract failed"
+            werewolfToken.transfer(address(stakingContract), tokenAmount), "Token transfer to staking contract failed"
         );
 
         // // Stake tokens in staking contract for msg.sender with a 10-year lock

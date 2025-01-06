@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 library SafeMath {
     /**
      * @dev Returns the addition of two unsigned integers, reverting on
@@ -43,11 +45,7 @@ library SafeMath {
      * NOTE: This is a feature of the next version of OpenZeppelin Contracts.
      * @dev Get it via `npm install @openzeppelin/contracts@next`.
      */
-    function sub(
-        uint256 a,
-        uint256 b,
-        string memory errorMessage
-    ) internal pure returns (uint256) {
+    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
         require(b <= a, errorMessage);
         uint256 c = a - b;
 
@@ -105,11 +103,7 @@ library SafeMath {
      * NOTE: This is a feature of the next version of OpenZeppelin Contracts.
      * @dev Get it via `npm install @openzeppelin/contracts@next`.
      */
-    function div(
-        uint256 a,
-        uint256 b,
-        string memory errorMessage
-    ) internal pure returns (uint256) {
+    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
         // Solidity only automatically asserts when dividing by 0
         require(b > 0, errorMessage);
         uint256 c = a / b;
@@ -147,91 +141,62 @@ library SafeMath {
      * NOTE: This is a feature of the next version of OpenZeppelin Contracts.
      * @dev Get it via `npm install @openzeppelin/contracts@next`.
      */
-    function mod(
-        uint256 a,
-        uint256 b,
-        string memory errorMessage
-    ) internal pure returns (uint256) {
+    function mod(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
         require(b != 0, errorMessage);
         return a % b;
     }
 }
 
-contract Timelock {
-    using SafeMath for uint;
+contract Timelock is Initializable {
+    using SafeMath for uint256;
 
     event NewAdmin(address indexed newAdmin);
     event NewPendingAdmin(address indexed newPendingAdmin);
-    event NewDelay(uint indexed newDelay);
-    event CancelTransaction(
-        bytes32 indexed txHash,
-        address indexed target,
-        string signature,
-        bytes data,
-        uint eta
-    );
-    event ExecuteTransaction(
-        bytes32 indexed txHash,
-        address indexed target,
-        string signature,
-        bytes data,
-        uint eta
-    );
-    event QueueTransaction(
-        bytes32 indexed txHash,
-        address indexed target,
-        string signature,
-        bytes data,
-        uint eta
-    );
+    event NewDelay(uint256 indexed newDelay);
+    event CancelTransaction(bytes32 indexed txHash, address indexed target, string signature, bytes data, uint256 eta);
+    event ExecuteTransaction(bytes32 indexed txHash, address indexed target, string signature, bytes data, uint256 eta);
+    event QueueTransaction(bytes32 indexed txHash, address indexed target, string signature, bytes data, uint256 eta);
 
-    uint public constant GRACE_PERIOD = 14 days;
-    uint public constant MINIMUM_DELAY = 2 days;
-    uint public constant MAXIMUM_DELAY = 30 days;
+    uint256 public constant GRACE_PERIOD = 14 days;
+    uint256 public constant MINIMUM_DELAY = 2 days;
+    uint256 public constant MAXIMUM_DELAY = 30 days;
 
     address public admin;
     address public pendingAdmin;
-    uint public delay;
+    uint256 public delay;
 
     mapping(bytes32 => bool) public queuedTransactions;
 
-    constructor(address admin_, uint delay_) {
-        require(
-            delay_ >= MINIMUM_DELAY,
-            "Timelock::constructor: Delay must exceed minimum delay."
-        );
-        require(
-            delay_ <= MAXIMUM_DELAY,
-            "Timelock::setDelay: Delay must not exceed maximum delay."
-        );
+    constructor( /* address admin_, uint256 delay_ */ ) {
+        /*  require(delay_ >= MINIMUM_DELAY, "Timelock::constructor: Delay must exceed minimum delay.");
+        require(delay_ <= MAXIMUM_DELAY, "Timelock::setDelay: Delay must not exceed maximum delay.");
 
         admin = admin_;
-        delay = delay_;
+        delay = delay_; */
+
+        //disable initializer
+        _disableInitializers();
     }
 
-    function setDelay(uint delay_) public {
-        require(
-            msg.sender == address(this),
-            "Timelock::setDelay: Call must come from Timelock."
-        );
-        require(
-            delay_ >= MINIMUM_DELAY,
-            "Timelock::setDelay: Delay must exceed minimum delay."
-        );
-        require(
-            delay_ <= MAXIMUM_DELAY,
-            "Timelock::setDelay: Delay must not exceed maximum delay."
-        );
+    function initialize(address _admin, uint256 _delay) public initializer {
+        require(_delay >= MINIMUM_DELAY, "Timelock::constructor: Delay must exceed minimum delay.");
+        require(_delay <= MAXIMUM_DELAY, "Timelock::setDelay: Delay must not exceed maximum delay.");
+
+        admin = _admin;
+        delay = _delay;
+    }
+
+    function setDelay(uint256 delay_) public {
+        require(msg.sender == address(this), "Timelock::setDelay: Call must come from Timelock.");
+        require(delay_ >= MINIMUM_DELAY, "Timelock::setDelay: Delay must exceed minimum delay.");
+        require(delay_ <= MAXIMUM_DELAY, "Timelock::setDelay: Delay must not exceed maximum delay.");
         delay = delay_;
 
         emit NewDelay(delay);
     }
 
     function acceptAdmin() public {
-        require(
-            msg.sender == pendingAdmin,
-            "Timelock::acceptAdmin: Call must come from pendingAdmin."
-        );
+        require(msg.sender == pendingAdmin, "Timelock::acceptAdmin: Call must come from pendingAdmin.");
         admin = msg.sender;
         pendingAdmin = address(0);
 
@@ -239,25 +204,17 @@ contract Timelock {
     }
 
     function setPendingAdmin(address pendingAdmin_) public {
-        require(
-            msg.sender == address(this),
-            "Timelock::setPendingAdmin: Call must come from Timelock."
-        );
+        require(msg.sender == address(this), "Timelock::setPendingAdmin: Call must come from Timelock.");
         pendingAdmin = pendingAdmin_;
 
         emit NewPendingAdmin(pendingAdmin);
     }
 
-    function queueTransaction(
-        address target,
-        string memory signature,
-        bytes memory data,
-        uint eta
-    ) public returns (bytes32) {
-        require(
-            msg.sender == admin,
-            "Timelock::queueTransaction: Call must come from admin."
-        );
+    function queueTransaction(address target, string memory signature, bytes memory data, uint256 eta)
+        public
+        returns (bytes32)
+    {
+        require(msg.sender == admin, "Timelock::queueTransaction: Call must come from admin.");
         require(
             eta >= getBlockTimestamp().add(delay),
             "Timelock::queueTransaction: Estimated execution block must satisfy delay."
@@ -270,16 +227,8 @@ contract Timelock {
         return txHash;
     }
 
-    function cancelTransaction(
-        address target,
-        string memory signature,
-        bytes memory data,
-        uint eta
-    ) public {
-        require(
-            msg.sender == admin,
-            "Timelock::cancelTransaction: Call must come from admin."
-        );
+    function cancelTransaction(address target, string memory signature, bytes memory data, uint256 eta) public {
+        require(msg.sender == admin, "Timelock::cancelTransaction: Call must come from admin.");
 
         bytes32 txHash = keccak256(abi.encode(target, signature, data, eta));
         queuedTransactions[txHash] = false;
@@ -287,32 +236,19 @@ contract Timelock {
         emit CancelTransaction(txHash, target, signature, data, eta);
     }
 
-    function executeTransaction(
-        address target,
-        string memory signature,
-        bytes memory data,
-        uint eta
-    ) public payable returns (bytes memory) {
-        require(
-            msg.sender == admin,
-            "Timelock::executeTransaction: Call must come from admin."
-        );
+    function executeTransaction(address target, string memory signature, bytes memory data, uint256 eta)
+        public
+        payable
+        returns (bytes memory)
+    {
+        require(msg.sender == admin, "Timelock::executeTransaction: Call must come from admin.");
         // Ensure the target contract is valid
         require(target != address(0), "Invalid target contract");
 
         bytes32 txHash = keccak256(abi.encode(target, signature, data, eta));
-        require(
-            queuedTransactions[txHash],
-            "Timelock::executeTransaction: Transaction hasn't been queued."
-        );
-        require(
-            getBlockTimestamp() >= eta,
-            "Timelock::executeTransaction: Transaction hasn't surpassed time lock."
-        );
-        require(
-            getBlockTimestamp() <= eta.add(GRACE_PERIOD),
-            "Timelock::executeTransaction: Transaction is stale."
-        );
+        require(queuedTransactions[txHash], "Timelock::executeTransaction: Transaction hasn't been queued.");
+        require(getBlockTimestamp() >= eta, "Timelock::executeTransaction: Transaction hasn't surpassed time lock.");
+        require(getBlockTimestamp() <= eta.add(GRACE_PERIOD), "Timelock::executeTransaction: Transaction is stale.");
 
         queuedTransactions[txHash] = false;
 
@@ -321,24 +257,18 @@ contract Timelock {
         if (bytes(signature).length == 0) {
             callData = data;
         } else {
-            callData = abi.encodePacked(
-                bytes4(keccak256(bytes(signature))),
-                data
-            );
+            callData = abi.encodePacked(bytes4(keccak256(bytes(signature))), data);
         }
 
         (bool success, bytes memory returnData) = target.call(callData);
-        require(
-            success,
-            "Timelock::executeTransaction: Transaction execution reverted."
-        );
+        require(success, "Timelock::executeTransaction: Transaction execution reverted.");
 
         emit ExecuteTransaction(txHash, target, signature, data, eta);
 
         return returnData;
     }
 
-    function getBlockTimestamp() internal view returns (uint) {
+    function getBlockTimestamp() internal view returns (uint256) {
         return block.timestamp;
     }
 }
