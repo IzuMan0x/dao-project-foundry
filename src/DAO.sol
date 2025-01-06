@@ -17,6 +17,7 @@ contract DAO is Initializable {
     mapping(address => bool) public authorizedCallers;
 
     struct Proposal {
+        bool executed; // Whether the proposal has been executed
         address proposer;
         address[] targets; // Contract to call
         string[] signatures; // Contract to call
@@ -25,7 +26,6 @@ contract DAO is Initializable {
         uint256 votesAgainst; // Votes against the proposal
         uint256 startBlock;
         uint256 endBlock;
-        bool executed; // Whether the proposal has been executed
         uint256 eta;
     }
 
@@ -151,8 +151,8 @@ contract DAO is Initializable {
         require(_targets.length != 0, "DAO::createProposal: must provide actions");
         require(_targets.length <= proposalMaxOperations(), "DAO::createProposal: too many actions");
 
-        uint256 startBlock = add256(block.number, votingDelay());
-        uint256 endBlock = add256(startBlock, votingPeriod());
+        uint256 startBlock = (block.number + votingDelay());
+        uint256 endBlock = (startBlock + votingPeriod());
 
         proposals[proposalCount] = Proposal({
             proposer: msg.sender,
@@ -173,8 +173,7 @@ contract DAO is Initializable {
 
     function queueProposal(uint256 proposalId) public {
         Proposal storage proposal = proposals[proposalId];
-        uint256 eta = add256(block.timestamp, timelock.delay());
-
+        uint256 eta = block.timestamp + timelock.delay();
         for (uint256 i = 0; i < proposal.targets.length; i++) {
             _queueOrRevert(proposal.targets[i], proposal.signatures[i], proposal.datas[i], eta);
         }

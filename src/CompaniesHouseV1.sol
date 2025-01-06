@@ -4,12 +4,14 @@ pragma solidity ^0.8.28;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
-import "./Treasury.sol";
-import "./WerewolfTokenV1.sol";
-import "./DAO.sol";
-import "./TokenSale.sol";
+import "./interfaces/Treasury.sol";
+import "./interfaces/WerewolfTokenV1.sol";
+import "./interfaces/DAO.sol";
+import "./interfaces/TokenSale.sol";
 
 contract CompaniesHouseV1 is AccessControlUpgradeable {
+    //TODO switch to interfaces to save gas
+    //first check remix if it really does save gas
     WerewolfTokenV1 private werewolfToken;
     TokenSale public tokenSale;
     DAO public dao;
@@ -109,6 +111,14 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
         _disableInitializers();
     }
 
+    /**
+     * @notice Initializes the proxy's storage
+     * @dev
+     * @param _token address of the Wereworlf token
+     * @param treasuryAddress address where all the funds and fees will be stored
+     * @param _daoAddress privileged address
+     * @param tokenSaleAddress the address that will handle the token sale
+     */
     function initialize(address _token, address treasuryAddress, address _daoAddress, address tokenSaleAddress)
         public
         initializer
