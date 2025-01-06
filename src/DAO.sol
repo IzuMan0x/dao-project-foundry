@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./WerewolfTokenV1.sol";
 import "./Treasury.sol";
 import "./Timelock.sol";
 
-contract DAO {
+contract DAO is Initializable {
     WerewolfTokenV1 public werewolfToken;
     Treasury public treasury;
     Timelock public timelock;
@@ -23,10 +23,10 @@ contract DAO {
         bytes[] datas; // Encoded function call with arguments
         uint256 votesFor; // Votes in favor of the proposal
         uint256 votesAgainst; // Votes against the proposal
-        uint startBlock;
-        uint endBlock;
+        uint256 startBlock;
+        uint256 endBlock;
         bool executed; // Whether the proposal has been executed
-        uint eta;
+        uint256 eta;
     }
 
     struct Receipt {
@@ -40,19 +40,21 @@ contract DAO {
 
     uint256 public proposalCount;
     mapping(uint256 => Proposal) public proposals;
-    mapping(uint => mapping(address => Receipt)) public proposalReceipts;
+    mapping(uint256 => mapping(address => Receipt)) public proposalReceipts;
     mapping(address => mapping(uint256 => bool)) public voted; // Tracks votes by user for each proposal
     address public treasuryAddress;
     uint256 public proposalCost = 10 * (10 ** 18); // cost to create a proposal in tokens
     mapping(bytes32 => bool) public queuedTransactions;
 
-    function proposalMaxOperations() public pure returns (uint) {
+    function proposalMaxOperations() public pure returns (uint256) {
         return 10;
     } // 10 actions
-    function votingDelay() public pure returns (uint) {
+
+    function votingDelay() public pure returns (uint256) {
         return 1;
     } // 1 block
-    function votingPeriod() public pure returns (uint) {
+
+    function votingPeriod() public pure returns (uint256) {
         return 17280;
     } // ~3 days in blocks (assuming 15s blocks)
 
@@ -64,7 +66,7 @@ contract DAO {
         return (5 * 10 ** 18) / 1000; // 0.5% represented with a factor of 10**18
     }
 
-    mapping(address => uint) public latestProposalIds;
+    mapping(address => uint256) public latestProposalIds;
 
     /// @notice Possible states that a proposal may be in
     enum ProposalState {
@@ -79,7 +81,7 @@ contract DAO {
     }
 
     event ProposalCreated(uint256 proposalId, address proposer);
-    event ProposalQueued(uint id, uint eta);
+    event ProposalQueued(uint256 id, uint256 eta);
     event ProposalExecuted(uint256 proposalId);
     event Voted(uint256 proposalId, address voter, bool support, uint256 votes);
 
@@ -89,14 +91,28 @@ contract DAO {
         _;
     }
 
-    constructor(address _token, address _treasury, address _timelock) {
-        werewolfToken = WerewolfTokenV1(_token);
+    constructor( /* address _token, address _treasury, address _timelock */ ) {
+        /*   werewolfToken = WerewolfTokenV1(_token);
         treasury = Treasury(_treasury);
         timelock = Timelock(_timelock);
         treasuryAddress = _treasury;
         werewolfTokenAddress = _token;
         guardian = msg.sender;
-        // _authorizeCaller(_timelock);
+        // _authorizeCaller(_timelock); */
+
+        //disable the implementation contract's initializers
+        _disableInitializers();
+    }
+
+    function initialize(address _token, address _treasury, address _timelock, address _gaurdian) public initializer {
+        werewolfToken = WerewolfTokenV1(_token);
+        treasury = Treasury(_treasury);
+        timelock = Timelock(_timelock);
+        treasuryAddress = _treasury;
+        werewolfTokenAddress = _token;
+        guardian = _gaurdian; //guardian cannot be the msg.sender since is will be the proxyAdmin
+            //guardian = msg.sender;
+            // _authorizeCaller(_timelock);
     }
 
     // Function to authorize an external contract (like CompaniesHouseV1)
@@ -110,11 +126,7 @@ contract DAO {
     }
 
     // Function to create a proposal
-    function createProposal(
-        address[] memory _targets,
-        string[] memory _signatures,
-        bytes[] memory _datas
-    ) public {
+    function createProposal(address[] memory _targets, string[] memory _signatures, bytes[] memory _datas) public {
         require(
             werewolfToken.balanceOf(msg.sender) >= proposalCost,
             "DAO::createProposal: Insufficient balance to create proposal"
@@ -122,11 +134,7 @@ contract DAO {
 
         // Transfer the proposal cost to the treasury address
         require(
-            werewolfToken.transferFrom(
-                msg.sender,
-                treasuryAddress,
-                proposalCost
-            ),
+            werewolfToken.transferFrom(msg.sender, treasuryAddress, proposalCost),
             "DAO::createProposal: WerewolfTokenV1 transfer for proposal cost failed"
         );
 
@@ -140,28 +148,19 @@ contract DAO {
         // );
 
         require(
-            werewolfToken.balanceOf(msg.sender) >
-                (werewolfToken.balanceOf(address(treasury)) *
-                    proposalThreshold()),
+            werewolfToken.balanceOf(msg.sender) > (werewolfToken.balanceOf(address(treasury)) * proposalThreshold()),
             "DAO::createProposal: proposer votes below proposal threshold"
         );
 
         require(
-            _targets.length == _signatures.length &&
-                _targets.length == _datas.length,
+            _targets.length == _signatures.length && _targets.length == _datas.length,
             "DAO::createProposal: proposal function information arity mismatch"
         );
-        require(
-            _targets.length != 0,
-            "DAO::createProposal: must provide actions"
-        );
-        require(
-            _targets.length <= proposalMaxOperations(),
-            "DAO::createProposal: too many actions"
-        );
+        require(_targets.length != 0, "DAO::createProposal: must provide actions");
+        require(_targets.length <= proposalMaxOperations(), "DAO::createProposal: too many actions");
 
-        uint startBlock = add256(block.number, votingDelay());
-        uint endBlock = add256(startBlock, votingPeriod());
+        uint256 startBlock = add256(block.number, votingDelay());
+        uint256 endBlock = add256(startBlock, votingPeriod());
 
         proposals[proposalCount] = Proposal({
             proposer: msg.sender,
@@ -180,32 +179,20 @@ contract DAO {
         proposalCount++;
     }
 
-    function queueProposal(uint proposalId) public {
+    function queueProposal(uint256 proposalId) public {
         Proposal storage proposal = proposals[proposalId];
-        uint eta = add256(block.timestamp, timelock.delay());
+        uint256 eta = add256(block.timestamp, timelock.delay());
 
-        for (uint i = 0; i < proposal.targets.length; i++) {
-            _queueOrRevert(
-                proposal.targets[i],
-                proposal.signatures[i],
-                proposal.datas[i],
-                eta
-            );
+        for (uint256 i = 0; i < proposal.targets.length; i++) {
+            _queueOrRevert(proposal.targets[i], proposal.signatures[i], proposal.datas[i], eta);
         }
         proposal.eta = eta;
         emit ProposalQueued(proposalId, eta);
     }
 
-    function _queueOrRevert(
-        address target,
-        string memory signature,
-        bytes memory data,
-        uint eta
-    ) internal {
+    function _queueOrRevert(address target, string memory signature, bytes memory data, uint256 eta) internal {
         require(
-            !timelock.queuedTransactions(
-                keccak256(abi.encode(target, signature, data))
-            ),
+            !timelock.queuedTransactions(keccak256(abi.encode(target, signature, data))),
             "DAO::_queueOrRevert: proposal action already queued at eta"
         );
         timelock.queueTransaction(target, signature, data, eta);
@@ -214,10 +201,7 @@ contract DAO {
     // Function to execute a proposal
     function executeProposal(uint256 proposalId) external {
         Proposal storage proposal = proposals[proposalId];
-        require(
-            !proposal.executed,
-            "DAO::executeProposal: Proposal already executed"
-        );
+        require(!proposal.executed, "DAO::executeProposal: Proposal already executed");
 
         // Ensure the proposal has enough "For" votes (must be more than 50% of total votes)
         uint256 totalVotes = proposal.votesFor + proposal.votesAgainst;
@@ -229,13 +213,8 @@ contract DAO {
         // Mark the proposal as executed
         proposal.executed = true;
 
-        for (uint i = 0; i < proposal.targets.length; i++) {
-            timelock.executeTransaction(
-                proposal.targets[i],
-                proposal.signatures[i],
-                proposal.datas[i],
-                proposal.eta
-            );
+        for (uint256 i = 0; i < proposal.targets.length; i++) {
+            timelock.executeTransaction(proposal.targets[i], proposal.signatures[i], proposal.datas[i], proposal.eta);
             emit ProposalExecuted(proposalId);
         }
     }
@@ -291,27 +270,24 @@ contract DAO {
         // Implement undelegation logic efficiently
     }
 
-    function sub256(uint256 a, uint256 b) internal pure returns (uint) {
+    function sub256(uint256 a, uint256 b) internal pure returns (uint256) {
         require(b <= a, "subtraction underflow");
         return a - b;
     }
 
-    function add256(uint256 a, uint256 b) internal pure returns (uint) {
-        uint c = a + b;
+    function add256(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 c = a + b;
         require(c >= a, "addition overflow");
         return c;
     }
 
-    function getBlockTimestamp() internal view returns (uint) {
+    function getBlockTimestamp() internal view returns (uint256) {
         // solium-disable-next-line security/no-block-members
         return block.timestamp;
     }
 
     function __acceptAdmin() public {
-        require(
-            msg.sender == guardian,
-            "GovernorAlpha::__acceptAdmin: sender must be gov guardian"
-        );
+        require(msg.sender == guardian, "GovernorAlpha::__acceptAdmin: sender must be gov guardian");
         timelock.acceptAdmin();
     }
 }

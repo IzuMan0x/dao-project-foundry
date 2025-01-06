@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./Timelock.sol";
 
-contract WerewolfTokenV1 is ERC20, Ownable {
+contract WerewolfTokenV1 is ERC20Upgradeable, OwnableUpgradeable {
     address public treasury;
     Timelock public timelock;
 
@@ -32,7 +32,7 @@ contract WerewolfTokenV1 is ERC20, Ownable {
         _;
     }
 
-    constructor(
+    /* constructor(
         address _treasury,
         address _timelock,
         address addr1,
@@ -48,6 +48,27 @@ contract WerewolfTokenV1 is ERC20, Ownable {
         uint256 transferAmount = 1000 * 10 ** decimals();
         _transfer(treasury, addr1, transferAmount);
         _transfer(treasury, addr2, transferAmount);
+    } */
+
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address _owner, address _treasury, address _timelock, address _addr1, address _addr2)
+        public
+        initializer
+    {
+        require(_treasury != address(0), "Treasury address cannot be zero");
+        __Ownable_init(_owner);
+        treasury = _treasury; // Set the Treasury address
+        timelock = Timelock(_timelock);
+        // Mint initial 1B tokens directly to the DAO's Treasury
+        _mint(_treasury, 1_000_000_000 * 10 ** decimals());
+
+        // Transfer tokens from the treasury to specified addresses
+        uint256 transferAmount = 1000 * 10 ** decimals();
+        _transfer(treasury, _addr1, transferAmount);
+        _transfer(treasury, _addr2, transferAmount);
     }
 
     // Function to authorize an external contract (like CompaniesHouseV1)
@@ -65,10 +86,7 @@ contract WerewolfTokenV1 is ERC20, Ownable {
         _transfer(treasury, to, amount);
     }
 
-    function payEmployee(
-        address to,
-        uint256 amount
-    ) external onlyAuthorizedCaller {
+    function payEmployee(address to, uint256 amount) external onlyAuthorizedCaller {
         require(balanceOf(treasury) >= amount, "Insufficient balance");
         _transfer(treasury, to, amount);
     }
@@ -85,14 +103,8 @@ contract WerewolfTokenV1 is ERC20, Ownable {
         treasury = _treasury;
     }
 
-    function getPriorVotes(
-        address account,
-        uint blockNumber
-    ) public view returns (uint96) {
-        require(
-            blockNumber < block.number,
-            "WerewolfTokenV1::getPriorVotes: not yet determined"
-        );
+    function getPriorVotes(address account, uint256 blockNumber) public view returns (uint96) {
+        require(blockNumber < block.number, "WerewolfTokenV1::getPriorVotes: not yet determined");
 
         uint32 nCheckpoints = numCheckpoints[account];
         if (nCheckpoints == 0) {
