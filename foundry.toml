@@ -4,4 +4,7 @@ out = "out"
 libs = ["lib"]
 
 
+# fix the compiler version to standardize testing
+solc_version = "0.8.28"
+
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
