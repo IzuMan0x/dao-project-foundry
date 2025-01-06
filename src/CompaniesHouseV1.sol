@@ -20,12 +20,6 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
 
     bytes32 public constant STAFF_ROLE = keccak256("CEO");
 
-    //note upgradeable contract this needs to be set in the initializer function
-    /*   uint256 public index = 0; // Number of companies @dev avoid initializing variable to zero it is a waste of gas consider starting at 1
-    uint256 public employeesIndex = 0; // Number of employees in company
-    uint256 public amountToPay = 10 * 10 ** 18; // Amount to pay to create a business
-    uint256 public fee = 10; */
-
     uint256 public index; // Number of companies
     uint256 public employeesIndex; // Number of employees in company
     uint256 public amountToPay; // Amount to pay to create a business
@@ -110,14 +104,7 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
         _;
     }
 
-    constructor( /* address _token, address treasuryAddress, address _daoAddress, address tokenSaleAddress */ ) {
-        /*    werewolfToken = WerewolfTokenV1(_token);
-        dao = DAO(_daoAddress);
-        tokenSale = TokenSale(tokenSaleAddress);
-        treasury = Treasury(treasuryAddress);
-        _treasuryAddress = treasuryAddress;
-        // _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        // _setupRole(STAFF_ROLE, msg.sender); */
+    constructor() {
         //disable the implementation contracts initializer
         _disableInitializers();
     }
@@ -150,7 +137,7 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
         string memory ownerRole,
         uint256 ownerSalary,
         string memory ownerCurrency
-    ) public payable {
+    ) public {
         require(
             werewolfToken.balanceOf(msg.sender) >= amountToPay + fee, "Token balance must be more than amount to pay."
         );

@@ -91,15 +91,7 @@ contract DAO is Initializable {
         _;
     }
 
-    constructor( /* address _token, address _treasury, address _timelock */ ) {
-        /*   werewolfToken = WerewolfTokenV1(_token);
-        treasury = Treasury(_treasury);
-        timelock = Timelock(_timelock);
-        treasuryAddress = _treasury;
-        werewolfTokenAddress = _token;
-        guardian = msg.sender;
-        // _authorizeCaller(_timelock); */
-
+    constructor() {
         //disable the implementation contract's initializers
         _disableInitializers();
     }
