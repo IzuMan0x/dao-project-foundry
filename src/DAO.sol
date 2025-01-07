@@ -17,6 +17,7 @@ contract DAO is Initializable {
     mapping(address => bool) public authorizedCallers;
 
     struct Proposal {
+        bool executed; // Whether the proposal has been executed
         address proposer;
         address[] targets; // Contract to call
         string[] signatures; // Contract to call
@@ -25,7 +26,6 @@ contract DAO is Initializable {
         uint256 votesAgainst; // Votes against the proposal
         uint256 startBlock;
         uint256 endBlock;
-        bool executed; // Whether the proposal has been executed
         uint256 eta;
     }
 
@@ -91,15 +91,7 @@ contract DAO is Initializable {
         _;
     }
 
-    constructor( /* address _token, address _treasury, address _timelock */ ) {
-        /*   werewolfToken = WerewolfTokenV1(_token);
-        treasury = Treasury(_treasury);
-        timelock = Timelock(_timelock);
-        treasuryAddress = _treasury;
-        werewolfTokenAddress = _token;
-        guardian = msg.sender;
-        // _authorizeCaller(_timelock); */
-
+    constructor() {
         //disable the implementation contract's initializers
         _disableInitializers();
     }
@@ -159,8 +151,8 @@ contract DAO is Initializable {
         require(_targets.length != 0, "DAO::createProposal: must provide actions");
         require(_targets.length <= proposalMaxOperations(), "DAO::createProposal: too many actions");
 
-        uint256 startBlock = add256(block.number, votingDelay());
-        uint256 endBlock = add256(startBlock, votingPeriod());
+        uint256 startBlock = (block.number + votingDelay());
+        uint256 endBlock = (startBlock + votingPeriod());
 
         proposals[proposalCount] = Proposal({
             proposer: msg.sender,
@@ -181,8 +173,7 @@ contract DAO is Initializable {
 
     function queueProposal(uint256 proposalId) public {
         Proposal storage proposal = proposals[proposalId];
-        uint256 eta = add256(block.timestamp, timelock.delay());
-
+        uint256 eta = block.timestamp + timelock.delay();
         for (uint256 i = 0; i < proposal.targets.length; i++) {
             _queueOrRevert(proposal.targets[i], proposal.signatures[i], proposal.datas[i], eta);
         }
@@ -268,17 +259,6 @@ contract DAO is Initializable {
 
     function undelegate() external {
         // Implement undelegation logic efficiently
-    }
-
-    function sub256(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b <= a, "subtraction underflow");
-        return a - b;
-    }
-
-    function add256(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        require(c >= a, "addition overflow");
-        return c;
     }
 
     function getBlockTimestamp() internal view returns (uint256) {

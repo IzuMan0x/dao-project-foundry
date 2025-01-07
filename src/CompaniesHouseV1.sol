@@ -4,12 +4,20 @@ pragma solidity ^0.8.28;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
+//for future use
+import "./interfaces/ITreasury.sol";
+import "./interfaces/IWerewolfTokenV1.sol";
+import "./interfaces/IDAO.sol";
+import "./interfaces/ITokenSale.sol";
+
 import "./Treasury.sol";
 import "./WerewolfTokenV1.sol";
 import "./DAO.sol";
 import "./TokenSale.sol";
 
 contract CompaniesHouseV1 is AccessControlUpgradeable {
+    //TODO switch to interfaces to save gas
+    //first check remix if it really does save gas
     WerewolfTokenV1 private werewolfToken;
     TokenSale public tokenSale;
     DAO public dao;
@@ -19,12 +27,6 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
     // string name;
 
     bytes32 public constant STAFF_ROLE = keccak256("CEO");
-
-    //note upgradeable contract this needs to be set in the initializer function
-    /*   uint256 public index = 0; // Number of companies @dev avoid initializing variable to zero it is a waste of gas consider starting at 1
-    uint256 public employeesIndex = 0; // Number of employees in company
-    uint256 public amountToPay = 10 * 10 ** 18; // Amount to pay to create a business
-    uint256 public fee = 10; */
 
     uint256 public index; // Number of companies
     uint256 public employeesIndex; // Number of employees in company
@@ -110,18 +112,19 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
         _;
     }
 
-    constructor( /* address _token, address treasuryAddress, address _daoAddress, address tokenSaleAddress */ ) {
-        /*    werewolfToken = WerewolfTokenV1(_token);
-        dao = DAO(_daoAddress);
-        tokenSale = TokenSale(tokenSaleAddress);
-        treasury = Treasury(treasuryAddress);
-        _treasuryAddress = treasuryAddress;
-        // _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        // _setupRole(STAFF_ROLE, msg.sender); */
+    constructor() {
         //disable the implementation contracts initializer
         _disableInitializers();
     }
 
+    /**
+     * @notice Initializes the proxy's storage
+     * @dev
+     * @param _token address of the Wereworlf token
+     * @param treasuryAddress address where all the funds and fees will be stored
+     * @param _daoAddress privileged address
+     * @param tokenSaleAddress the address that will handle the token sale
+     */
     function initialize(address _token, address treasuryAddress, address _daoAddress, address tokenSaleAddress)
         public
         initializer
@@ -150,7 +153,7 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
         string memory ownerRole,
         uint256 ownerSalary,
         string memory ownerCurrency
-    ) public payable {
+    ) public {
         require(
             werewolfToken.balanceOf(msg.sender) >= amountToPay + fee, "Token balance must be more than amount to pay."
         );
