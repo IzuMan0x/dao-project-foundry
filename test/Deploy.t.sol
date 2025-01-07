@@ -122,7 +122,7 @@ contract DeployTest is Test {
         //run this to verify the setup is running correctly
     }
 
-    /*  function test_AirdropToTokenSale() public {
+    function test_AirdropToTokenSale() public {
         uint256 tokenSaleBalance = werewolfToken.balanceOf(address(tokenSale));
         assertEq(tokenSaleBalance, tokenSaleAirdrop);
     }
@@ -144,6 +144,7 @@ contract DeployTest is Test {
     }
 
     function test_FounderBuyTokens() public {
+        vm.startPrank(founder);
         uint256 founderWLFBalanceBefore = werewolfToken.balanceOf(founder);
         uint256 founderUSDTBalanceBefore = mockUSDT.balanceOf(founder);
 
@@ -171,5 +172,6 @@ contract DeployTest is Test {
         assertEq(stakingWLFBalance, tokenSaleAirdrop);
         assertEq(founderUSDTBalanceAfter, founderUSDTBalanceBefore - 5000 ether);
         assertEq(stakingUSDTBalance, 5000 ether);
-    } */
+        vm.stopPrank();
+    }
 }
