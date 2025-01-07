@@ -30,14 +30,17 @@ contract Treasury is OwnableUpgradeable {
         _disableInitializers();
     }
 
-    function initialize(address _token, address _owner) public initializer {
-        require(_token != address(0) && _owner != address(0), "WerewolfTokenV1 address cannot be zero");
-        // werewolfToken = _token;
-        werewolfToken = WerewolfTokenV1(_token);
-        allowedTokens[_token] = true; // Set initial werewolfToken as allowed
-
+    function initialize(address _owner) public initializer {
+        require(_owner != address(0), "WerewolfTokenV1 address cannot be zero");
         //initialize the owner of the contract
         __Ownable_init(_owner);
+    }
+
+    function setWerewolfToken(address _token) public onlyOwner {
+        require(address(werewolfToken) == address(0), "Teasury token address already set");
+        require(_token != address(0), "WerewolfTokenV1 address cannot be zero");
+        allowedTokens[_token] = true; // Set initial werewolfToken as allowed
+        werewolfToken = WerewolfTokenV1(_token);
     }
 
     function setStakingContract(address _stakingAddress) external onlyOwner {

@@ -62,14 +62,14 @@ contract TokenSale is OwnableUpgradeable {
     event TokensPurchased(address indexed buyer, uint256 amount, uint256 saleId);
 
     // BUG: remove address _uniswapHelper
-    constructor(
-        address _token,
+    constructor() 
+    /* address _token,
         address _treasury,
         address _timelock,
         address _usdtTokenAddress,
         address _stakingAddress,
-        address _uniswapHelper
-    ) {
+        address _uniswapHelper */
+    {
         /*      require(_usdtTokenAddress != address(0), "USDT address cannot be zero");
         usdtTokenAddress = _usdtTokenAddress;
         usdtToken = IERC20(_usdtTokenAddress);

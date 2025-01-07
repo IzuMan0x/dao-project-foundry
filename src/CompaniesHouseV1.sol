@@ -4,10 +4,16 @@ pragma solidity ^0.8.28;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
-import "./interfaces/Treasury.sol";
-import "./interfaces/WerewolfTokenV1.sol";
-import "./interfaces/DAO.sol";
-import "./interfaces/TokenSale.sol";
+//for future use
+import "./interfaces/ITreasury.sol";
+import "./interfaces/IWerewolfTokenV1.sol";
+import "./interfaces/IDAO.sol";
+import "./interfaces/ITokenSale.sol";
+
+import "./Treasury.sol";
+import "./WerewolfTokenV1.sol";
+import "./DAO.sol";
+import "./TokenSale.sol";
 
 contract CompaniesHouseV1 is AccessControlUpgradeable {
     //TODO switch to interfaces to save gas

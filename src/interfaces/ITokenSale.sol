@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.4;
 
-interface TokenSale {
+interface ITokenSale {
     error InvalidInitialization();
     error NotInitializing();
     error OwnableInvalidOwner(address owner);
