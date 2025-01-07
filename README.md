@@ -4,7 +4,95 @@
 
 - discord https://discord.gg/DVDtsbHp
 
-## Deploy Steps:
+# Summary
+
+- You can read deploy steps [here](#deploy-steps)
+
+## DAO
+
+DAO controls all the contracts via proposals that are queued and executed by the Timelock
+
+- can do:
+
+  - sets fee
+
+  - add/remove supported tokens
+
+  - remove companies that don't follow guidelines
+
+  - change threshold, quorumVotes and so on
+
+## Staking
+
+Contract to handle staking.
+
+Staking can be with a fixed or variable duration.
+
+## Token Sale
+
+There's different token sales.
+
+- #0 is just for founder (or any other initial supporter) and it's just so that DAO can start functioning (threshold 0.5%)
+
+- #1 is the official token sale with same price of #0
+
+Both #0 and #1 (and we should add like a flag so we can set each one if they follow this rule) all tokens are added as liquidity to uniswap and token_LP is staked for a fixed staking period.
+
+Both #0 and #1 (same of above we might need to add a flag) voting power is delegated to founder (or multisig or something like that) so that we wait for token distribution before DAO has full power.
+
+## WerewolfToken
+
+This is the contract for the token.
+
+## CompaniesHouse
+
+It's were an user can create and manage a company.
+
+the owner can hire/fire/pay employees/collaborators.
+
+This will be connected to an off chain accounting/ERP software. I think it could be some sort of oracle. I'd like to be able to audit a company with one click and see all financial/economy data with 100% accuracy.
+
+## Treasury
+
+This is the treasury for the DAO but I was thinking that each company should have a treasury? or the treasury will be the wallet of the company itself?
+
+# Roles
+
+## Admin
+
+What does admin do that it cannot be done by DAO?
+
+## User
+
+Can:
+
+- stake tokens
+
+- claim rewards
+
+- CRUD company
+
+- if token holder can create/vote proposals
+
+## Company employee
+
+roles:
+
+- founder
+
+- CEO
+
+- HHR: head human resources
+
+- dev
+
+- ...
+
+# Style Guidelines
+
+...
+
+# Deploy Steps:
 
 1. **Deploy Contracts**  
    The founder deploys the following contracts in sequence:
@@ -50,11 +138,6 @@
 
 9. **Proposal and Voting**
    - The founder proposes and votes for `tokenSale#1` using the `DAO` contract. This ensures the governance system is functional and the next token sale is prepared.
-
-#### Notes:
-
-- Ensure all operations involving token transfers, staking, and approvals are logged and verified using assertions similar to the provided test cases.
-- Simulate necessary delays or mine blocks using helper functions to ensure accurate testing of time-sensitive features.
 
 # Foundry
 
