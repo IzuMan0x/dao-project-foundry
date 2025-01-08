@@ -15,25 +15,23 @@ import "./WerewolfTokenV1.sol";
 import "./DAO.sol";
 import "./TokenSale.sol";
 
+/* Contract layout:
+ Data types: structs, enums, and type declarations
+ State Variables
+ Events
+ Function Modifiers
+ Constructor/Initialize
+ Fallback and Receive function
+ External functions
+ Public functions
+ Internal functions
+ Private Functions
+*/
+
 contract CompaniesHouseV1 is AccessControlUpgradeable {
-    //TODO switch to interfaces to save gas
-    //first check remix if it really does save gas
-    WerewolfTokenV1 private werewolfToken;
-    TokenSale public tokenSale;
-    DAO public dao;
-    Treasury public treasury;
-    // CompanyV1 creator;
-    // address owner;
-    // string name;
-
-    bytes32 public constant STAFF_ROLE = keccak256("CEO");
-
-    uint256 public index; // Number of companies
-    uint256 public employeesIndex; // Number of employees in company
-    uint256 public amountToPay; // Amount to pay to create a business
-    uint256 public fee;
-
-    // Company Struct
+    ///////////////////////////////////////
+    //           Data Types              //
+    ///////////////////////////////////////
     struct CompanyStruct {
         uint256 companyId;
         address owner;
@@ -46,15 +44,6 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
         string[] roles;
         string[] powerRoles;
     }
-
-    CompanyStruct public company;
-    CompanyStruct[] public companies;
-    // mapping(address => mapping(uint32 => CompanyStruct)) public companies;
-
-    mapping(uint256 => CompanyStruct[]) public companiesByOwner;
-
-    event CompanyCreated(CompanyStruct company); // Event
-    event CompanyDeleted(CompanyStruct company); // Event
 
     struct Employee {
         uint256 salary;
@@ -81,15 +70,45 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
         bool active;
         string currency;
     }
+    ///////////////////////////////////////
+    //           State Variables         //
+    ///////////////////////////////////////
+    // TODO check to see if switching to interfaces saves gas
+
+    WerewolfTokenV1 private werewolfToken;
+    TokenSale public tokenSale;
+    DAO public dao;
+    Treasury public treasury;
+    // CompanyV1 creator;
+    // address owner;
+    // string name;
+    bytes32 public constant STAFF_ROLE = keccak256("CEO");
+    uint256 public index; // Number of companies
+    uint256 public employeesIndex; // Number of employees in company
+    uint256 public amountToPay; // Amount to pay to create a business
+    uint256 public fee;
+
+    CompanyStruct public company;
+    CompanyStruct[] public companies;
+    // mapping(address => mapping(uint32 => CompanyStruct)) public companies;
+    mapping(uint256 => CompanyStruct[]) public companiesByOwner;
 
     mapping(address => Employee) private _employees;
     address private _treasuryAddress;
     address private _owner;
 
+    ///////////////////////////////////////
+    //           Events                  //
+    ///////////////////////////////////////
     event EmployeeHired(address indexed employee, uint256 salary);
     event EmployeeFired(address indexed employee);
     event EmployeePaid(address indexed employee, uint256 amount);
+    event CompanyCreated(CompanyStruct company);
+    event CompanyDeleted(CompanyStruct company);
 
+    ///////////////////////////////////////
+    //           Modifiers               //
+    ///////////////////////////////////////
     modifier onlyRoleWithPower(uint256 _companyId) {
         // Ensure the caller is a member of the company
         Employee storage employee = _employees[msg.sender];
@@ -111,6 +130,9 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
         require(hasPower, "You do not have a power role in this company.");
         _;
     }
+    ///////////////////////////////////////
+    //      Constructor/Initializer      //
+    ///////////////////////////////////////
 
     constructor() {
         //disable the implementation contracts initializer
@@ -143,22 +165,27 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
         // _setupRole(STAFF_ROLE, msg.sender);
     }
 
+    ///////////////////////////////////////
+    //           Public Functions        //
+    ///////////////////////////////////////
+
     function createCompany(
         string memory _name,
         string memory _industry,
-        string memory domain,
-        string[] memory roles,
-        string[] memory powerRoles,
-        string memory ownerName,
-        string memory ownerRole,
-        uint256 ownerSalary,
-        string memory ownerCurrency
+        string memory _domain,
+        string[] memory _roles,
+        string[] memory _powerRoles,
+        string memory _ownerName,
+        string memory _ownerRole,
+        uint256 _ownerSalary,
+        string memory _ownerCurrency
     ) public {
         require(
             werewolfToken.balanceOf(msg.sender) >= amountToPay + fee, "Token balance must be more than amount to pay."
         );
 
-        address[] memory employees;
+        address[] memory employeesArray;
+
         CompanyStruct memory newCompany = CompanyStruct({
             companyId: index,
             owner: msg.sender,
@@ -166,10 +193,10 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
             name: _name,
             createdAt: block.timestamp,
             active: true,
-            employees: employees,
-            domain: domain,
-            roles: roles,
-            powerRoles: powerRoles
+            employees: employeesArray,
+            domain: _domain,
+            roles: _roles,
+            powerRoles: _powerRoles
         });
 
         companies.push(newCompany);
@@ -177,18 +204,18 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
 
         // Now hire the owner as the first employee
         Employee storage employee = _employees[msg.sender];
-        employee.salary = ownerSalary;
+        employee.salary = _ownerSalary;
         employee.lastPayDate = block.timestamp;
         employee.employeeId = employeesIndex;
         employee.payableAddress = msg.sender;
-        employee.name = ownerName;
+        employee.name = _ownerName;
         employee.companyId = index; //mh we should avoid having a company with ID == 0
-        employee.role = ownerRole;
+        employee.role = _ownerRole;
         employee.hiredAt = block.timestamp;
         employee.active = true;
-        employee.currency = ownerCurrency;
+        employee.currency = _ownerCurrency;
 
-        emit EmployeeHired(msg.sender, ownerSalary);
+        emit EmployeeHired(msg.sender, _ownerSalary);
         companies[index].employees.push(msg.sender);
         employeesIndex += 1;
 
@@ -201,23 +228,6 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
         require(msg.sender == companies[_number].owner);
         delete companies[_number];
         emit CompanyDeleted(companies[_number]); // Triggering event
-    }
-
-    function retrieveCompany(uint256 _companyId) public view returns (CompanyStruct memory) {
-        return companies[_companyId];
-    }
-
-    function retrieveEmployee(uint256 _companyId, address _employee) public view returns (Employee memory) {
-        // Ensure that only the owner of the company can retrieve employee details
-        require(
-            msg.sender == companies[_companyId].owner, "Only the owner of the company can retrieve employee details"
-        );
-
-        // Check if the employee exists in the employees mapping
-        Employee memory employee = _employees[_employee];
-        require(employee.companyId == _companyId, "Employee does not belong to this company");
-
-        return employee;
     }
 
     function hireEmployee(
@@ -373,5 +383,22 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
 
     function addCompanyRole(uint256 _companyId, string memory _newRole) public onlyRoleWithPower(_companyId) {
         companies[_companyId].roles.push(_newRole);
+    }
+
+    function retrieveCompany(uint256 _companyId) public view returns (CompanyStruct memory) {
+        return companies[_companyId];
+    }
+
+    function retrieveEmployee(uint256 _companyId, address _employee) public view returns (Employee memory) {
+        // Ensure that only the owner of the company can retrieve employee details
+        require(
+            msg.sender == companies[_companyId].owner, "Only the owner of the company can retrieve employee details"
+        );
+
+        // Check if the employee exists in the employees mapping
+        Employee memory employee = _employees[_employee];
+        require(employee.companyId == _companyId, "Employee does not belong to this company");
+
+        return employee;
     }
 }
