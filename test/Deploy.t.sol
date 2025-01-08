@@ -145,23 +145,18 @@ contract DeployTest is Test {
 
     function test_FounderBuyTokens() public {
         vm.startPrank(founder);
+        uint256 amount = 5_000e6; //mainnet USDT has 6 decimals
+        mockUSDT.mint(founder, amount);
         uint256 founderWLFBalanceBefore = werewolfToken.balanceOf(founder);
         uint256 founderUSDTBalanceBefore = mockUSDT.balanceOf(founder);
 
         // Approve TokenSale contract to spend tokens
         werewolfToken.approve(address(tokenSale), tokenSaleAirdrop);
-        mockUSDT.approve(address(tokenSale), 5000 ether);
+        mockUSDT.approve(address(tokenSale), amount);
 
         // Buy tokens
         tokenSale.buyTokens(
-            tokenSaleAirdrop,
-            address(werewolfToken),
-            address(mockUSDT),
-            100,
-            -887272,
-            887272,
-            tokenSaleAirdrop,
-            5000 ether
+            tokenSaleAirdrop, address(werewolfToken), address(mockUSDT), 100, -887272, 887272, tokenSaleAirdrop, amount
         );
 
         uint256 founderWLFBalanceAfter = werewolfToken.balanceOf(founder);
@@ -170,8 +165,8 @@ contract DeployTest is Test {
         uint256 stakingUSDTBalance = mockUSDT.balanceOf(address(staking));
 
         assertEq(stakingWLFBalance, tokenSaleAirdrop);
-        assertEq(founderUSDTBalanceAfter, founderUSDTBalanceBefore - 5000 ether);
-        assertEq(stakingUSDTBalance, 5000 ether);
+        assertEq(founderUSDTBalanceAfter, founderUSDTBalanceBefore - amount);
+        assertEq(stakingUSDTBalance, amount);
         vm.stopPrank();
     }
 }
