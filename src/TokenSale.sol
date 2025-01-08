@@ -138,20 +138,6 @@ contract TokenSale is OwnableUpgradeable {
         emit SaleStarted(saleIdCounter, _amount, _price);
     }
 
-    // BUG: test
-    function testTransferFrom(uint256 amount) external {
-        // require(
-        //     IERC20(token).transferFrom(from, to, amount),
-        //     "TransferFrom failed"
-        // );
-        require(usdtToken.transferFrom(msg.sender, address(stakingContract), amount), "USDT transfer failed");
-    }
-
-    // BUG: test
-    function testTransfer(uint256 amount) external {
-        require(werewolfToken.transfer(address(stakingContract), amount), "Token transfer to staking contract failed");
-    }
-
     function buyTokens(
         uint256 _amount,
         address token0,

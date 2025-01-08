@@ -117,7 +117,7 @@ contract DeployTest is Test {
         vm.stopPrank();
     }
 
-    function testSetupProcess() public {
+    function test_SetupProcess() public {
         //blank test
         //run this to verify the setup is running correctly
     }
