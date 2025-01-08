@@ -12,7 +12,7 @@ import {UniswapHelper} from "../src/UniswapHelper.sol";
 import {MockUSDT} from "./mocks/MockUSDT.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-contract DeployTest is Test {
+contract BaseTest is Test {
     // Contract instances
     WerewolfTokenV1 werewolfToken;
     Treasury treasury;
