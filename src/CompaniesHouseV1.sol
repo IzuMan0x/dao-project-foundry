@@ -58,6 +58,7 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
         string currency;
     }
 
+    //currentl unused
     struct InventoryItem {
         uint256 salary;
         uint256 lastPayDate;
@@ -88,7 +89,6 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
     uint256 public amountToPay; // Amount to pay to create a business
     uint256 public fee;
 
-    CompanyStruct public company;
     CompanyStruct[] public companies;
     // mapping(address => mapping(uint32 => CompanyStruct)) public companies;
     mapping(uint256 => CompanyStruct[]) public companiesByOwner;
@@ -180,9 +180,8 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
         uint256 _ownerSalary,
         string memory _ownerCurrency
     ) public {
-        require(
-            werewolfToken.balanceOf(msg.sender) >= amountToPay + fee, "Token balance must be more than amount to pay."
-        );
+        require(werewolfToken.balanceOf(msg.sender) >= amountToPay, "Token balance must be more than amount to pay.");
+        require(werewolfToken.transferFrom(msg.sender, address(this), amountToPay), "Transfer failed.");
 
         address[] memory employeesArray;
 
@@ -191,7 +190,7 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
             owner: msg.sender,
             industry: _industry,
             name: _name,
-            createdAt: block.timestamp,
+            createdAt: block.timestamp, //note might be cheaper to cache block.timstamp
             active: true,
             employees: employeesArray,
             domain: _domain,
@@ -220,8 +219,6 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
         employeesIndex += 1;
 
         index += 1;
-
-        require(werewolfToken.transferFrom(msg.sender, address(this), amountToPay), "Transfer failed.");
     }
 
     function deleteCompany(uint256 _number) public {
@@ -231,7 +228,7 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
     }
 
     function hireEmployee(
-        address employeeAddress,
+        address _employeeAddress,
         string memory _name,
         string memory _role,
         uint256 _companyId,
@@ -249,11 +246,11 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
 
         require(roleExists, "Role is not present in company's roles.");
 
-        Employee storage employee = _employees[employeeAddress];
+        Employee storage employee = _employees[_employeeAddress];
         employee.salary = salary;
         employee.lastPayDate = block.timestamp;
         employee.employeeId = employeesIndex;
-        employee.payableAddress = employeeAddress;
+        employee.payableAddress = _employeeAddress;
         employee.name = _name;
         employee.companyId = _companyId;
         employee.role = _role;
@@ -261,8 +258,8 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
         employee.active = true;
         employee.currency = _currency;
 
-        emit EmployeeHired(employeeAddress, salary);
-        companies[_companyId].employees.push(employeeAddress);
+        emit EmployeeHired(_employeeAddress, salary);
+        companies[_companyId].employees.push(_employeeAddress);
         employeesIndex += 1;
     }
 
