@@ -8,6 +8,29 @@
 
 - You can read deploy steps [here](#deploy-steps)
 
+## Contract Layout and Natspec
+//Example function natspec:
+/**
+ * @notice Explain what this function does
+ * @param Documents a parameter just like in doxygen (must be followed by parameter name)
+ * @return Documents the return variables of a contract’s function state variable
+ * @inheritdoc	Copies all missing tags from the base function (must be followed by the contract name)
+ */
+
+//When adding anything please follow the contract layout
+/* Contract layout:
+ Data types: structs, enums, and type declarations
+ State Variables
+ Events
+ Function Modifiers
+ Constructor/Initialize
+ Fallback and Receive function
+ External functions
+ Public functions
+ Internal functions
+ Private Functions
+*/
+
 ## DAO
 
 DAO controls all the contracts via proposals that are queued and executed by the Timelock
