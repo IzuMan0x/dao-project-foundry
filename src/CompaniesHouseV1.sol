@@ -371,7 +371,8 @@ contract CompaniesHouseV1 is AccessControlUpgradeable {
             ownerToCompanies[compBrief.owner][compBrief.index].employees[empBrief.employeeIndex];
 
         uint256 payPeriod = block.timestamp - s_employee.lastPayDate;
-        uint256 payAmount = payPeriod * s_employee.salary;
+        //question is the decimals of the token 18??
+        uint256 payAmount = payPeriod * s_employee.salary / 1 hours; // we can make the salary hourly
         require(payAmount > 0, "Not enough time has passed to pay employee");
 
         werewolfToken.payEmployee(_employeeAddress, payAmount);
